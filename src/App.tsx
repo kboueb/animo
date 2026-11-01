@@ -7,7 +7,9 @@ import { Logo } from './components/Logo'
 import { BackupReminder } from './components/BackupReminder'
 import { SeedBanner } from './components/SeedBanner'
 import { exportLibrary } from './backup'
-import { checkNews } from './anilist'
+import { addAlerts, useAlerts } from './alerts'
+import { AlertsDialog } from './components/AlertsDialog'
+import { detectReleases, refreshNews } from './releases'
 import { STATUSES, STATUS_HINTS, STATUS_LABELS, type Anime, type Status } from './types'
 import { cloudEnabled } from './supabase'
 import { useCloudSync } from './useCloudSync'
@@ -35,7 +37,24 @@ const EMPTY_TEXT: Record<Status, string> = {
 /** Nom affiché : titre anglais s'il existe, sinon romaji */
 const nameOf = (a: Anime) => a.titleAlt ?? a.title
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+/** Vérification automatique des nouveautés : au plus une fois toutes les 20 h, à l'ouverture de l'app */
+const AUTO_CHECK_KEY = 'animo.autoCheck'
+const AUTO_CHECK_EVERY = 20 * 60 * 60 * 1000
+function autoCheckDue(): boolean {
+  try {
+    const last = localStorage.getItem(AUTO_CHECK_KEY)
+    return !last || Date.now() - new Date(last).getTime() > AUTO_CHECK_EVERY
+  } catch {
+    return false
+  }
+}
+function markAutoCheck() {
+  try {
+    localStorage.setItem(AUTO_CHECK_KEY, new Date().toISOString())
+  } catch {
+    /* ignoré */
+  }
+}
 
 export default function App() {
   const { items, itemsRef, add, addMany, update, remove, applySync } = useLibrary()
@@ -59,7 +78,10 @@ export default function App() {
   }
   const [adding, setAdding] = useState(false)
   const [checkingIds, setCheckingIds] = useState<Set<string>>(new Set())
-  const [bulkProgress, setBulkProgress] = useState<string | null>(null)
+  const [checkingAll, setCheckingAll] = useState(false)
+  const alerts = useAlerts()
+  const unread = alerts.filter((a) => !a.readAt).length
+  const [alertsOpen, setAlertsOpen] = useState(() => new URLSearchParams(window.location.search).has('alerts'))
   const fileRef = useRef<HTMLInputElement>(null)
   // Incrémenté après un export pour rafraîchir le rappel de sauvegarde
   const [backupTick, setBackupTick] = useState(0)
@@ -88,40 +110,71 @@ export default function App() {
     return [...list].sort(sorters[sort])
   }, [items, tab, filter, sort])
 
-  async function runCheck(anime: Anime) {
-    if (!anime.anilistId) return
-    setCheckingIds((s) => new Set(s).add(anime.id))
+  /**
+   * Vérifie les nouveautés d'un ou plusieurs anime en quelques requêtes groupées,
+   * met à jour leurs suites et crée les alertes de sortie (suite sortie / annoncée).
+   */
+  async function checkMany(list: Anime[]) {
+    const targets = list.filter((a) => a.anilistId)
+    if (!targets.length) return
+    const ids = targets.map((a) => a.id)
+    setCheckingIds((s) => new Set([...s, ...ids]))
+    const now = new Date().toISOString()
     try {
-      const found = await checkNews(anime.anilistId)
-      update(anime.id, { news: { checkedAt: new Date().toISOString(), items: found } }, false)
-    } catch (e) {
-      update(
-        anime.id,
-        { news: { checkedAt: new Date().toISOString(), items: [], error: e instanceof Error ? e.message : 'Erreur' } },
-        false,
+      const fresh = await refreshNews(
+        targets.map((a) => a.anilistId!),
+        targets.flatMap((a) => a.news?.items.map((i) => i.id) ?? []),
       )
+      const found = []
+      for (const a of targets) {
+        const next = fresh.get(a.anilistId!)
+        if (!next) continue
+        found.push(...detectReleases(nameOf(a), a.news?.items, next).map((al) => ({ ...al, animeId: a.id })))
+        update(a.id, { news: { checkedAt: now, items: next } }, false)
+      }
+      addAlerts(found)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Erreur'
+      // On garde les suites déjà connues, on signale juste l'échec
+      for (const a of targets) update(a.id, { news: { checkedAt: now, items: a.news?.items ?? [], error: message } }, false)
     } finally {
       setCheckingIds((s) => {
         const next = new Set(s)
-        next.delete(anime.id)
+        ids.forEach((id) => next.delete(id))
         return next
       })
     }
   }
 
+  const runCheck = (anime: Anime) => checkMany([anime])
+
   async function checkAll() {
-    // Séquentiel et espacé pour respecter la limite de débit d'AniList
-    const todo = items.filter((x) => x.status === 'waiting' && x.anilistId)
+    setCheckingAll(true)
     try {
-      for (const [i, a] of todo.entries()) {
-        setBulkProgress(`${i + 1}/${todo.length}`)
-        await runCheck(a)
-        if (i < todo.length - 1) await sleep(1000)
-      }
+      await checkMany(itemsRef.current.filter((x) => x.status === 'waiting'))
+      markAutoCheck()
     } finally {
-      setBulkProgress(null)
+      setCheckingAll(false)
     }
   }
+
+  // Vérification automatique quotidienne, quelques secondes après l'ouverture
+  useEffect(() => {
+    if (!autoCheckDue()) return
+    const timer = setTimeout(() => {
+      if (!navigator.onLine || !itemsRef.current.some((a) => a.status === 'waiting')) return
+      void checkAll()
+    }, 3000)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Clic sur une notification push alors que l'app est déjà ouverte
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => e.data?.type === 'animo-open-alerts' && setAlertsOpen(true)
+    navigator.serviceWorker?.addEventListener('message', onMessage)
+    return () => navigator.serviceWorker?.removeEventListener('message', onMessage)
+  }, [])
 
   async function importJson(file: File) {
     try {
@@ -134,13 +187,22 @@ export default function App() {
     }
   }
 
-  const checkingAny = checkingIds.size > 0 || !!bulkProgress
+  const checkingAny = checkingIds.size > 0 || checkingAll
 
   return (
     <div className="app">
       <header className="topbar">
         <Logo />
         <div className="topbar-actions">
+          <button
+            className="icon-btn bell-btn"
+            onClick={() => setAlertsOpen(true)}
+            title={unread ? `${unread} alerte${unread > 1 ? 's' : ''} non lue${unread > 1 ? 's' : ''}` : 'Alertes de sortie'}
+            aria-label={`Alertes de sortie${unread ? ` (${unread} non lues)` : ''}`}
+          >
+            <Icon name="bell" size={21} />
+            {unread > 0 && <span className="bell-badge">{unread > 9 ? '9+' : unread}</span>}
+          </button>
           {cloudEnabled && (
             <button
               className={`icon-btn cloud-btn cloud-${cloud.status}`}
@@ -269,7 +331,7 @@ export default function App() {
         {tab === 'waiting' && counts.waiting > 0 && (
           <button className="btn small check-all" onClick={checkAll} disabled={checkingAny}>
             <Icon name="refresh" size={15} />
-            {bulkProgress ? `Vérification ${bulkProgress}…` : checkingAny ? 'Vérification…' : 'Vérifier les nouveautés'}
+            {checkingAny ? 'Vérification…' : 'Vérifier les nouveautés'}
             {newsCount > 0 && !checkingAny && <span className="btn-badge">{newsCount}</span>}
           </button>
         )}
@@ -313,6 +375,31 @@ export default function App() {
         existingIds={allIds}
         onAdd={add}
         onClose={() => setAdding(false)}
+      />
+
+      <AlertsDialog
+        open={alertsOpen}
+        onClose={() => {
+          setAlertsOpen(false)
+          // On nettoie ?alerts=1 (ouverture depuis une notification)
+          if (window.location.search) window.history.replaceState(null, '', window.location.pathname)
+        }}
+        alerts={alerts}
+        loggedIn={!!cloud.session}
+        onOpenAccount={() => {
+          setAlertsOpen(false)
+          setAccountOpen(true)
+        }}
+        onShowAnime={(animeId) => {
+          const anime = items.find((a) => a.id === animeId)
+          if (!anime) return
+          setTab(anime.status)
+          setFilter(nameOf(anime))
+          setAlertsOpen(false)
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+        }}
+        checking={checkingAny}
+        onCheckNow={() => void checkAll()}
       />
 
       <AccountDialog

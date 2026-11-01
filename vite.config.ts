@@ -12,6 +12,7 @@ function supabaseEnv(mode: string) {
   const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env }
   const first = (...names: string[]) => names.map((n) => env[n]).find((v) => v && v.trim()) ?? ''
   return {
+    vapidPublicKey: first('VITE_VAPID_PUBLIC_KEY', 'VAPID_PUBLIC_KEY'),
     url: first('VITE_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_URL'),
     anonKey: first(
       'VITE_SUPABASE_ANON_KEY',
@@ -29,6 +30,8 @@ export default defineConfig(({ mode }) => {
   define: {
     'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(supa.url),
     'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(supa.anonKey),
+    // Clé publique VAPID (notifications push). La clé privée reste côté serveur.
+    'import.meta.env.VITE_VAPID_PUBLIC_KEY': JSON.stringify(supa.vapidPublicKey),
   },
   plugins: [
     react(),
@@ -55,6 +58,10 @@ export default defineConfig(({ mode }) => {
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
         navigateFallback: '/index.html',
+        // Les fonctions serveur ne doivent jamais être servies par le cache de l'app
+        navigateFallbackDenylist: [/^\/api\//],
+        // Réception et clic des notifications push
+        importScripts: ['push-sw.js'],
         runtimeCaching: [
           {
             // Affiches AniList : on les garde pour un affichage hors ligne

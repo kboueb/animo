@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [{ "path": "/api/check-releases", "schedule": "0 7 * * *" }],
+  "functions": {
+    "api/check-releases.ts": { "maxDuration": 60 }
+  }
+}

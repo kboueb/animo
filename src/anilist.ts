@@ -1,6 +1,5 @@
 // Client minimal pour l'API GraphQL d'AniList (gratuite, sans clé).
 // Limite : ~30 à 90 requêtes/min, d'où les pauses et les nouvelles tentatives sur 429.
-import type { NewsItem } from './types'
 
 const API = 'https://graphql.anilist.co'
 const TIMEOUT_MS = 15000
@@ -67,56 +66,6 @@ export async function searchAnime(search: string, signal?: AbortSignal): Promise
 
 export const yearOf = (m: AniMedia) => m.seasonYear ?? m.startDate.year
 
-function formatDate(d: AniMedia['startDate']): string | undefined {
-  if (!d.year) return undefined
-  if (!d.month) return String(d.year)
-  return new Date(d.year, d.month - 1, d.day ?? 1).toLocaleDateString('fr-FR', {
-    day: d.day ? 'numeric' : undefined,
-    month: 'short',
-    year: 'numeric',
-  })
-}
-
-const toNews = (m: AniMedia): NewsItem => ({
-  id: m.id,
-  title: m.title.english ?? m.title.romaji,
-  status: m.status,
-  date: formatDate(m.startDate),
-  nextEpisode: m.nextAiringEpisode ?? undefined,
-  url: m.siteUrl,
-})
-
-interface MediaWithRelations extends AniMedia {
-  relations: { edges: { relationType: string; node: AniMedia & { type: string } }[] }
-}
-
-/**
- * Cherche ce qu'il y a de neuf pour un anime : la série elle-même si elle est
- * encore en diffusion, et toutes ses suites (chaîne de "SEQUEL" suivie sur 6 niveaux).
- */
-export async function checkNews(anilistId: number): Promise<NewsItem[]> {
-  const query = `query ($id: Int) {
-    Media(id: $id, type: ANIME) {
-      ${MEDIA_FIELDS}
-      relations { edges { relationType node { type ${MEDIA_FIELDS} } } }
-    }
-  }`
-  const items: NewsItem[] = []
-  const seen = new Set<number>([anilistId])
-  let current = anilistId
-  for (let depth = 0; depth < 6; depth++) {
-    const { Media } = await gql<{ Media: MediaWithRelations }>(query, { id: current })
-    if (depth > 0 || Media.status === 'RELEASING') items.push(toNews(Media))
-    const next = Media.relations.edges.find(
-      (e) => e.relationType === 'SEQUEL' && e.node.type === 'ANIME' && !seen.has(e.node.id),
-    )?.node
-    if (!next) break
-    seen.add(next.id)
-    current = next.id
-    await sleep(700)
-  }
-  return items
-}
 
 export const STATUS_FR: Record<string, string> = {
   FINISHED: 'Terminé',

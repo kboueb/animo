@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js'
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { cloudEnabled, supabase } from './supabase'
+import { syncAlerts } from './alerts'
 import { lastSyncDate, syncNow } from './sync'
 import { pendingCount } from './syncState'
 import type { Anime } from './types'
@@ -36,6 +37,8 @@ export function useCloudSync(items: Anime[], itemsRef: RefObject<Anime[]>, apply
     setStatus('syncing')
     try {
       await syncNow(itemsRef.current, applySync)
+      // Alertes : celles créées par le serveur (push) ou les autres appareils
+      await syncAlerts(sessionRef.current.user.id).catch(() => undefined)
       setLastSync(lastSyncDate())
       setError(null)
       setStatus(pendingCount() ? 'pending' : 'synced')

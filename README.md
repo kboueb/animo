@@ -28,6 +28,16 @@ Sans configuration, ANIMO fonctionne en local uniquement. Avec Supabase, la list
 
 Fonctionnement : l'appareil reste la source immédiate (rapide, hors ligne). La synchro a lieu à la connexion, après chaque modification, au retour sur l'app, au retour du réseau et toutes les 2 minutes. En cas de modification du même anime sur deux appareils, la plus récente gagne. Les règles RLS garantissent que chaque compte ne voit que ses propres données.
 
+## Alertes de sortie et notifications push
+
+- **Dans l'app** : une cloche (en haut) liste les alertes. ANIMO vérifie automatiquement les anime « En attente » une fois par jour à l'ouverture (requêtes AniList groupées : quelques secondes pour toute la liste) et crée une alerte quand une suite **sort** (passe d'« à venir » à « en diffusion » / « terminé ») ou est **annoncée**.
+- **Notifications push** (app fermée) : une tâche Vercel (`api/check-releases.ts`, tous les jours à 7 h UTC, voir `vercel.json`) fait la même vérification pour chaque compte et envoie une notification aux appareils abonnés. Une même sortie n'est signalée qu'une fois (clé unique par utilisateur).
+
+Mise en place (une fois) :
+1. Supabase → SQL Editor → exécute [`supabase/schema-alerts.sql`](supabase/schema-alerts.sql).
+2. Dans le terminal du projet : `bash scripts/setup-push.sh` (génère les clés VAPID et le secret de la tâche, les enregistre dans Vercel, redéploie).
+3. Dans ANIMO (connecté) : cloche → **Activer les notifications** → **Envoyer un test**. Sur iPhone / iPad : uniquement depuis l'app installée sur l'écran d'accueil (iOS 16.4 ou plus).
+
 ## Lancer
 
 ```bash
