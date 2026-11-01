@@ -1,0 +1,63 @@
+# ANIMO
+
+Application web pour suivre ses anime, en trois listes :
+
+- **Déjà vus** : les anime terminés, avec une note sur 5 et des notes perso
+- **En attente** : vus, mais en attente d'une suite ou de nouveaux épisodes. Le bouton « Vérifier les nouveautés » interroge AniList et liste les suites (terminées, en diffusion ou à venir, avec la date du prochain épisode)
+- **À suivre** : les anime pas encore commencés
+
+## Installer sur le téléphone (PWA)
+
+ANIMO est une PWA : une fois en ligne (en HTTPS, par exemple sur Vercel ou Netlify), ouvre le site sur ton téléphone puis :
+
+- **iPhone (Safari)** : bouton Partager → « Sur l'écran d'accueil »
+- **Android (Chrome)** : menu ⋮ → « Installer l'application »
+
+L'app s'ouvre alors en plein écran et fonctionne hors ligne (liste et affiches déjà vues). La recherche et la vérification des nouveautés demandent une connexion.
+
+## Synchronisation en ligne (Supabase, optionnel)
+
+Sans configuration, ANIMO fonctionne en local uniquement. Avec Supabase, la liste est sauvegardée en ligne et synchronisée entre tes appareils (connexion par code reçu par e-mail).
+
+1. Crée un projet gratuit sur [supabase.com](https://supabase.com) (région Europe, par exemple Paris ou Francfort).
+2. **SQL Editor** → New query → colle le contenu de [`supabase/schema.sql`](supabase/schema.sql) → **Run**.
+3. **Authentication → Emails → Templates → Magic Link** : remplace le contenu par un message qui contient le code, par exemple :
+   `<h2>Ton code ANIMO</h2><p>Code de connexion : <strong>{{ .Token }}</strong></p>`
+   (sans `{{ .Token }}`, tu recevrais un lien au lieu d'un code, et le lien ne s'ouvre pas dans l'app installée sur iPhone).
+4. **Project Settings → API** : copie *Project URL* et la clé *anon public* dans un fichier `.env.local` (modèle : `.env.example`).
+5. Relance `npm run dev`. Un bouton nuage apparaît en haut : connecte-toi avec ton e-mail.
+
+Fonctionnement : l'appareil reste la source immédiate (rapide, hors ligne). La synchro a lieu à la connexion, après chaque modification, au retour sur l'app, au retour du réseau et toutes les 2 minutes. En cas de modification du même anime sur deux appareils, la plus récente gagne. Les règles RLS garantissent que chaque compte ne voit que ses propres données.
+
+## Lancer
+
+```bash
+npm install
+npm run dev      # http://localhost:5173
+npm run build    # version de production dans dist/ (avec service worker)
+npm run preview  # tester la version de production en local
+```
+
+## Fonctionnement
+
+- Recherche et affiches via l'API GraphQL publique d'[AniList](https://anilist.co) (sans clé). Un titre introuvable peut être ajouté manuellement.
+- **Pas de serveur ni de base de données** : la liste est stockée sur l'appareil (`localStorage`). Pour éviter de la perdre :
+  - ANIMO demande au navigateur un stockage **persistant** (pas d'effacement automatique) ;
+  - à chaque enregistrement, la version précédente est gardée en **copie de secours** (`animo.library.backup`), utilisée si la liste principale devient illisible ;
+  - un **rappel de sauvegarde** s'affiche si la liste n'a jamais été exportée, ou si la dernière sauvegarde date de plus de 14 jours avec des changements depuis ;
+  - le bouton **Sauvegarder** (flèche ↓) exporte un fichier `animo-AAAA-MM-JJ.json` : sur iPhone, la feuille de partage permet de l'enregistrer dans Fichiers / iCloud Drive. Le bouton **Restaurer** (flèche ↑) réimporte une sauvegarde en ajoutant les anime manquants, sans rien écraser.
+- Sur iPhone, installe ANIMO sur l'écran d'accueil : Safari peut effacer les données d'un simple site après 7 jours sans visite, pas celles d'une app installée.
+- Chaque appareil a sa propre liste (pas de synchronisation). Pour passer de l'un à l'autre : Sauvegarder sur le premier, Restaurer sur le second.
+- Badge **Nouveauté** : une suite est sortie (ou en diffusion) et tu ne l'as pas marquée « Vu ». Badge **Annoncé** : une suite est prévue mais pas encore sortie.
+- Au premier lancement sur un appareil, une bannière propose d'ajouter la liste « Animes saison 2 » (52 anime, dans `src/data/seed.ts`). Les anime déjà présents sont ignorés.
+
+## Structure
+
+| Fichier | Rôle |
+| --- | --- |
+| `src/types.ts` | Modèle de données (`Anime`, statuts, nouveautés) |
+| `src/anilist.ts` | Client AniList : recherche et détection des suites |
+| `src/useLibrary.ts` | Hook de persistance (localStorage, synchro entre onglets) |
+| `src/App.tsx` | Onglets, filtre, tri, export/import |
+| `src/components/` | Fenêtre d'ajout, carte d'anime, logo, icônes |
+| `brand/` | Logo Oni-chan : masters SVG, variantes, icônes, guide |
