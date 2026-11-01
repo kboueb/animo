@@ -447,7 +447,8 @@ textarea { width: 100%; resize: vertical; }
   .tab-count { font-size: 0.85rem; font-weight: 500; color: var(--muted); opacity: 1; }
 
   .list-title { font-size: 1.3rem; }
-  .grid { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 22px; }
+  /* 4 colonnes au maximum ; moins si la fenêtre est trop étroite pour des cartes de 210 px */
+  .grid { grid-template-columns: repeat(auto-fill, minmax(max(210px, calc((100% - 3 * 22px) / 4)), 1fr)); gap: 22px; }
   .card-body { padding: 14px 14px 12px; gap: 8px; }
   .card-body h3 { font-size: 1.02rem; }
 }
