@@ -502,3 +502,59 @@ textarea { width: 100%; resize: vertical; }
 .password-wrap input { flex: 1; padding-right: 84px; }
 .show-pw { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); }
 .account-message.error { color: var(--danger); }
+
+/* ============ Bascule grille / liste ============ */
+.view-toggle { display: flex; flex: none; gap: 2px; padding: 3px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); }
+.view-toggle button {
+  display: grid; place-items: center; width: 38px; height: 36px; border: 0; border-radius: 999px;
+  background: none; color: var(--muted); cursor: pointer;
+}
+.view-toggle button.on { background: var(--accent); color: #fff; }
+.list-meta { display: none; }
+
+/* ============ Vue liste : une ligne par anime, petite affiche à gauche ============ */
+.card-head { display: flex; flex-direction: column; gap: inherit; min-width: 0; }
+.grid.is-list { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+/* Mobile : affiche + en-tête côte à côte, nouveautés et boutons sur toute la largeur en dessous */
+.is-list .card {
+  display: grid; grid-template-columns: 84px minmax(0, 1fr); align-items: start;
+  column-gap: 12px; row-gap: 10px; padding: 10px;
+}
+.is-list .card:hover { transform: none; }
+.is-list .card-body { display: contents; }
+.is-list .card-head { grid-column: 2; grid-row: 1; gap: 5px; }
+.is-list .poster { grid-column: 1; grid-row: 1; width: auto; aspect-ratio: 2 / 3; border-radius: 10px; }
+.is-list .news, .is-list .status-switch { grid-column: 1 / -1; }
+.is-list .poster::after, .is-list .poster-meta { display: none; }
+.is-list .poster-fallback { font-size: 2rem; }
+.is-list .badge-new { top: auto; bottom: 4px; left: 4px; right: 4px; justify-content: center; padding: 2px 4px; font-size: 0.6rem; }
+.is-list .badge-new .icon { display: none; }
+.is-list .poster-delete { top: 4px; right: 4px; width: 28px; height: 28px; }
+.is-list .card-body h3 { -webkit-line-clamp: 2; }
+.is-list .list-meta { display: block; margin: -2px 0 0; color: var(--muted); font-size: 0.75rem; font-weight: 700; }
+@media (hover: hover) { .is-list .card:hover .poster img { transform: none; } }
+
+/* Tablette et ordinateur : tout à droite de l'affiche */
+@media (min-width: 600px) {
+  .is-list .card { grid-template-columns: 110px minmax(0, 1fr); grid-template-rows: auto auto 1fr; column-gap: 18px; padding: 12px; }
+  .is-list .poster { grid-row: 1 / span 3; }
+  .is-list .news { grid-column: 2; }
+  .is-list .status-switch { grid-column: 2; align-self: end; max-width: 340px; }
+  /* Les suites se rangent côte à côte quand la ligne est large */
+  .is-list .news { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px 14px; }
+  .is-list .news > .link-btn, .is-list .news > p { grid-column: 1 / -1; }
+  .is-list .news-item { border-bottom: 0; padding-bottom: 0; }
+}
+/* Ordinateur : 3 colonnes (affiche | titre, note, boutons | nouveautés) pour des lignes compactes */
+@media (min-width: 900px) {
+  .grid.is-list { gap: 14px; }
+  .is-list .card {
+    grid-template-columns: 120px minmax(240px, 320px) minmax(0, 1fr);
+    grid-template-rows: auto 1fr; column-gap: 22px;
+  }
+  .is-list .poster { grid-row: 1 / span 2; }
+  .is-list .card-head { grid-column: 2; grid-row: 1; }
+  .is-list .status-switch { grid-column: 2; grid-row: 2; }
+  .is-list .news { grid-column: 3; grid-row: 1 / span 2; align-self: start; }
+  .is-list .card-body h3 { font-size: 1.08rem; }
+}

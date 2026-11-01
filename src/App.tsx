@@ -14,6 +14,17 @@ import { useCloudSync } from './useCloudSync'
 import { isAnimeList, useLibrary } from './useLibrary'
 
 type Sort = 'recent' | 'title' | 'rating'
+type View = 'grid' | 'list'
+
+const VIEW_KEY = 'animo.view'
+/** Préférence d'affichage, mémorisée par appareil */
+function readView(): View {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid'
+  } catch {
+    return 'grid'
+  }
+}
 
 const EMPTY_TEXT: Record<Status, string> = {
   watched: 'Aucun anime terminé pour l’instant.',
@@ -37,6 +48,15 @@ export default function App() {
   const [tab, setTab] = useState<Status>('waiting')
   const [filter, setFilter] = useState('')
   const [sort, setSort] = useState<Sort>('recent')
+  const [view, setView] = useState<View>(readView)
+  const changeView = (v: View) => {
+    setView(v)
+    try {
+      localStorage.setItem(VIEW_KEY, v)
+    } catch {
+      /* préférence non mémorisée : sans gravité */
+    }
+  }
   const [adding, setAdding] = useState(false)
   const [checkingIds, setCheckingIds] = useState<Set<string>>(new Set())
   const [bulkProgress, setBulkProgress] = useState<string | null>(null)
@@ -225,6 +245,26 @@ export default function App() {
             <option value="title">A → Z</option>
             <option value="rating">Mieux notés</option>
           </select>
+          <div className="view-toggle" role="group" aria-label="Affichage">
+            <button
+              className={view === 'grid' ? 'on' : ''}
+              aria-pressed={view === 'grid'}
+              onClick={() => changeView('grid')}
+              title="Affichage en grille"
+              aria-label="Affichage en grille"
+            >
+              <Icon name="grid" size={18} />
+            </button>
+            <button
+              className={view === 'list' ? 'on' : ''}
+              aria-pressed={view === 'list'}
+              onClick={() => changeView('list')}
+              title="Affichage en liste"
+              aria-label="Affichage en liste"
+            >
+              <Icon name="list" size={18} />
+            </button>
+          </div>
         </div>
         {tab === 'waiting' && counts.waiting > 0 && (
           <button className="btn small check-all" onClick={checkAll} disabled={checkingAny}>
@@ -248,7 +288,7 @@ export default function App() {
           )}
         </div>
       ) : (
-        <main className="grid">
+        <main className={`grid ${view === 'list' ? 'is-list' : ''}`}>
           {visible.map((a) => (
             <AnimeCard
               key={a.id}

@@ -84,68 +84,73 @@ export function AnimeCard({ anime, watchedIds, checking, onUpdate, onRemove, onC
       </div>
 
       <div className="card-body">
-        {/* Titre anglais en premier quand il existe (plus familier), romaji en sous-titre */}
-        <h3 title={displayTitle}>
-          {anime.url ? (
-            <a href={anime.url} target="_blank" rel="noreferrer">
-              {displayTitle}
-            </a>
-          ) : (
-            displayTitle
-          )}
-        </h3>
-        {anime.titleAlt && <p className="alt-title">{anime.title}</p>}
+        {/* En-tête : titre, infos, note, commentaire (à côté de l'affiche en vue liste) */}
+        <div className="card-head">
+          {/* Titre anglais en premier quand il existe (plus familier), romaji en sous-titre */}
+          <h3 title={displayTitle}>
+            {anime.url ? (
+              <a href={anime.url} target="_blank" rel="noreferrer">
+                {displayTitle}
+              </a>
+            ) : (
+              displayTitle
+            )}
+          </h3>
+          {anime.titleAlt && <p className="alt-title">{anime.title}</p>}
+          {/* Infos affichées sous le titre en vue liste (en vue grille, elles sont sur l'affiche) */}
+          {meta && <p className="list-meta">{meta}</p>}
 
-        <div className="stars" role="radiogroup" aria-label="Note">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <button
-              key={n}
-              role="radio"
-              aria-checked={anime.rating === n}
-              aria-label={`${n} sur 5`}
-              className={n <= anime.rating ? 'on' : ''}
-              onClick={() => onUpdate({ rating: anime.rating === n ? 0 : n })}
-            >
-              ★
-            </button>
-          ))}
-        </div>
-
-        {editingNotes ? (
-          <div className="notes-edit">
-            <textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              rows={3}
-              autoFocus
-              aria-label="Note personnelle"
-            />
-            <div className="row">
+          <div className="stars" role="radiogroup" aria-label="Note">
+            {[1, 2, 3, 4, 5].map((n) => (
               <button
-                className="btn small"
-                onClick={() => {
-                  onUpdate({ notes: draft.trim() })
-                  setEditingNotes(false)
-                }}
+                key={n}
+                role="radio"
+                aria-checked={anime.rating === n}
+                aria-label={`${n} sur 5`}
+                className={n <= anime.rating ? 'on' : ''}
+                onClick={() => onUpdate({ rating: anime.rating === n ? 0 : n })}
               >
-                Enregistrer
+                ★
               </button>
-              <button
-                className="btn ghost small"
-                onClick={() => {
-                  setDraft(anime.notes)
-                  setEditingNotes(false)
-                }}
-              >
-                Annuler
-              </button>
-            </div>
+            ))}
           </div>
-        ) : (
-          <button className={`notes ${anime.notes ? '' : 'empty-note'}`} onClick={() => setEditingNotes(true)}>
-            {anime.notes || '+ Ajouter une note'}
-          </button>
-        )}
+
+          {editingNotes ? (
+            <div className="notes-edit">
+              <textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                rows={3}
+                autoFocus
+                aria-label="Note personnelle"
+              />
+              <div className="row">
+                <button
+                  className="btn small"
+                  onClick={() => {
+                    onUpdate({ notes: draft.trim() })
+                    setEditingNotes(false)
+                  }}
+                >
+                  Enregistrer
+                </button>
+                <button
+                  className="btn ghost small"
+                  onClick={() => {
+                    setDraft(anime.notes)
+                    setEditingNotes(false)
+                  }}
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button className={`notes ${anime.notes ? '' : 'empty-note'}`} onClick={() => setEditingNotes(true)}>
+              {anime.notes || '+ Ajouter une note'}
+            </button>
+          )}
+        </div>
 
         {anime.status === 'waiting' && (
           <div className="news">
