@@ -56,7 +56,9 @@ export default defineConfig(({ mode }) => {
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,webp,ico,webmanifest}'],
+        // Les écrans de démarrage iOS ne servent qu'à l'installation : inutile de les mettre en cache
+        globIgnores: ['splash/**'],
         navigateFallback: '/index.html',
         // Les fonctions serveur ne doivent jamais être servies par le cache de l'app
         navigateFallbackDenylist: [/^\/api\//],

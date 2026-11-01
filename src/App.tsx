@@ -9,6 +9,7 @@ import { SeedBanner } from './components/SeedBanner'
 import { exportLibrary } from './backup'
 import { addAlerts, useAlerts } from './alerts'
 import { AlertsDialog } from './components/AlertsDialog'
+import { GuideDialog, guideSeen } from './components/GuideDialog'
 import { detectReleases, refreshNews } from './releases'
 import { STATUSES, STATUS_HINTS, STATUS_LABELS, type Anime, type Status } from './types'
 import { cloudEnabled } from './supabase'
@@ -19,12 +20,15 @@ type Sort = 'recent' | 'title' | 'rating'
 type View = 'grid' | 'list'
 
 const VIEW_KEY = 'animo.view'
-/** Préférence d'affichage, mémorisée par appareil */
+/** Préférence d'affichage, mémorisée par appareil.
+ *  Par défaut : liste (une fiche par ligne) sur téléphone, grille ailleurs. */
 function readView(): View {
+  const fallback: View = window.matchMedia('(max-width: 599px)').matches ? 'list' : 'grid'
   try {
-    return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid'
+    const saved = localStorage.getItem(VIEW_KEY)
+    return saved === 'list' || saved === 'grid' ? saved : fallback
   } catch {
-    return 'grid'
+    return fallback
   }
 }
 
@@ -60,6 +64,8 @@ export default function App() {
   const { items, itemsRef, add, addMany, update, remove, applySync } = useLibrary()
   const cloud = useCloudSync(items, itemsRef, applySync)
   const [accountOpen, setAccountOpen] = useState(false)
+  // Tutoriel : ouvert tout seul au premier lancement (sauf si on arrive depuis une notification)
+  const [guideOpen, setGuideOpen] = useState(() => !guideSeen() && !new URLSearchParams(window.location.search).has('alerts'))
   // Lien « mot de passe oublié » ouvert : on affiche directement le formulaire de nouveau mot de passe
   useEffect(() => {
     if (cloud.recovering) setAccountOpen(true)
@@ -233,6 +239,9 @@ export default function App() {
               e.target.value = ''
             }}
           />
+          <button className="icon-btn desktop-only" onClick={() => setGuideOpen(true)} title="Guide de prise en main" aria-label="Guide de prise en main">
+            <Icon name="help" size={21} />
+          </button>
           <button className="btn desktop-only" onClick={() => setAdding(true)}>
             <Icon name="plus" size={16} /> Ajouter
           </button>
@@ -415,8 +424,15 @@ export default function App() {
         onRecovered={cloud.clearRecovery}
       />
 
+      <GuideDialog open={guideOpen} onClose={() => setGuideOpen(false)} />
+
       <footer className="footer muted tiny">
-        {cloud.session ? `Synchronisé avec ${cloud.session.user.email}` : 'Données stockées sur cet appareil'} · Recherche via AniList
+        <button className="link-btn guide-link" onClick={() => setGuideOpen(true)}>
+          <Icon name="help" size={15} /> Guide de prise en main
+        </button>
+        <span>
+          {cloud.session ? `Synchronisé avec ${cloud.session.user.email}` : 'Données stockées sur cet appareil'} · Recherche via AniList
+        </span>
       </footer>
     </div>
   )
