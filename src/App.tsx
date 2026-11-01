@@ -191,9 +191,9 @@ export default function App() {
               <span className="tab-label">{STATUS_LABELS[s]}</span>
               <span className="tab-count">
                 {counts[s]}
-                <span className="desktop-only"> anime</span>
+                <span className="wide-only"> anime</span>
                 {s === 'waiting' && newsCount > 0 && (
-                  <span className="tab-news desktop-only">
+                  <span className="tab-news wide-only">
                     {' · '}
                     {newsCount} nouveauté{newsCount > 1 ? 's' : ''}
                   </span>

@@ -91,6 +91,7 @@ a { color: inherit; text-decoration: none; }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .clamp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .desktop-only { display: none !important; }
+.wide-only { display: none; }
 
 /* ============ Mise en page (mobile d'abord) ============ */
 .app {
@@ -283,6 +284,16 @@ textarea { width: 100%; resize: vertical; }
   padding: 0 4px; border-radius: 9px; cursor: pointer; font-size: 0.72rem; font-weight: 700; color: var(--muted);
 }
 .status-switch button span { display: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Libellés affichés dès que la carte est assez large, quelle que soit la taille de l'écran */
+.card { container-type: inline-size; }
+@container (min-width: 215px) { .status-switch button span { display: inline; } }
+/* Carte étroite (grille dense sur tablette ou mobile) : la date passe à la ligne, plus de troncature */
+@container (max-width: 239px) {
+  .news-meta { flex-wrap: wrap; row-gap: 3px; }
+  .news-meta .clamp { order: 3; flex-basis: 100%; white-space: normal; }
+  .news-meta .seen-btn { margin-left: auto; }
+  .link-btn .muted { display: none; }
+}
 .status-switch .status-watched.active { background: var(--c-watched); color: #fff; }
 .status-switch .status-waiting.active { background: var(--c-waiting); color: #fff; }
 .status-switch .status-planned.active { background: var(--c-planned); color: #fff; }
@@ -360,7 +371,6 @@ textarea { width: 100%; resize: vertical; }
   .app { padding-left: 20px; padding-right: 20px; }
   .topbar { margin: 0 -20px; padding-left: 20px; padding-right: 20px; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 18px; }
-  .status-switch button span { display: inline; }
   .seed-banner { grid-template-columns: auto 1fr auto; }
   .seed-actions { grid-column: auto; }
   .seed-actions .btn { flex: none; }
@@ -380,9 +390,37 @@ textarea { width: 100%; resize: vertical; }
   .result { padding: 8px; border-bottom: 0; border-radius: 14px; }
 }
 
+/* ============ Tablette en portrait : onglets collés en haut, grille 4 colonnes ============ */
+/* min-height exclut les téléphones tenus à l'horizontale, qui gardent la barre du bas */
+@media (min-width: 600px) and (max-width: 899px) and (min-height: 600px) {
+  .wide-only { display: inline; }
+  .app { padding-bottom: calc(var(--safe-bottom) + 110px); }
+  .topbar { border-bottom: 0; }
+  .tabs {
+    position: sticky; top: calc(var(--safe-top) + 64px); z-index: 14; bottom: auto;
+    height: auto; margin: 0 -20px; padding: 6px 20px 12px; gap: 10px;
+    border-top: 0; border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    flex-direction: row; justify-content: flex-start; gap: 10px; text-align: left; color: var(--text);
+    padding: 8px 12px; border-radius: 16px; background: var(--surface); border: 1.5px solid var(--border);
+  }
+  .tab.active { color: var(--text); border-color: var(--c); background: linear-gradient(135deg, var(--c-soft), var(--surface) 75%); }
+  .tab-icon { width: 38px; height: 38px; border-radius: 12px; background: var(--c-soft); color: var(--c); flex: none; }
+  .tab.active .tab-icon { background: var(--c); color: #fff; }
+  .tab-dot { top: -3px; right: -3px; }
+  .tab-text { flex-direction: column; align-items: flex-start; gap: 0; min-width: 0; }
+  .tab-label { font-family: var(--font-display); font-size: 0.98rem; font-weight: 700; }
+  .tab-count { font-size: 0.78rem; font-weight: 600; color: var(--muted); opacity: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .toolbar { margin-top: 18px; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 16px; }
+  .fab { right: 24px; bottom: calc(var(--safe-bottom) + 24px); }
+}
+
 /* ============ Ordinateur : onglets en cartes en haut, plus de barre du bas ============ */
 @media (min-width: 900px) {
   .desktop-only { display: revert !important; }
+  .wide-only { display: inline; }
   .fab { display: none; }
   .app { padding-bottom: 56px; }
   .topbar { padding-top: 20px; padding-bottom: 14px; }
