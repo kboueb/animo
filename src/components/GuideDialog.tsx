@@ -105,10 +105,10 @@ function buildSteps(): Step[] {
       title: 'Repère les nouveautés',
       text: 'Pour la liste En attente, ANIMO cherche les suites de chaque anime et te montre où elles en sont.',
       image: '/tutorial/news.webp',
-      alt: 'Deux fiches avec les badges Annoncé et Nouveauté',
+      alt: 'Une fiche avec le badge Nouveauté, une suite terminée et une suite à venir',
       points: [
         { icon: 'sparkle', text: <><b>Nouveauté</b> : une suite est sortie, tu peux la regarder.</> },
-        { icon: 'clock', text: <><b>Annoncé</b> : une suite est prévue, avec sa date si elle est connue.</> },
+        { icon: 'clock', text: <><b>Annoncé</b> / <b>À venir</b> : une suite est prévue, avec sa date si elle est connue.</> },
         { icon: 'check', text: <>Touche <b>Vu</b> sur une suite regardée pour retirer le badge.</> },
       ],
     },
