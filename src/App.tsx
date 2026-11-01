@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AccountDialog } from './components/AccountDialog'
 import { AddAnimeDialog } from './components/AddAnimeDialog'
 import { AnimeCard, STATUS_ICON, hasFreshNews } from './components/AnimeCard'
@@ -30,6 +30,10 @@ export default function App() {
   const { items, itemsRef, add, addMany, update, remove, applySync } = useLibrary()
   const cloud = useCloudSync(items, itemsRef, applySync)
   const [accountOpen, setAccountOpen] = useState(false)
+  // Lien « mot de passe oublié » ouvert : on affiche directement le formulaire de nouveau mot de passe
+  useEffect(() => {
+    if (cloud.recovering) setAccountOpen(true)
+  }, [cloud.recovering])
   const [tab, setTab] = useState<Status>('waiting')
   const [filter, setFilter] = useState('')
   const [sort, setSort] = useState<Sort>('recent')
@@ -280,6 +284,8 @@ export default function App() {
         lastSync={cloud.lastSync}
         count={items.length}
         onSyncNow={() => void cloud.syncNow()}
+        recovering={cloud.recovering}
+        onRecovered={cloud.clearRecovery}
       />
 
       <footer className="footer muted tiny">

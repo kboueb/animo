@@ -16,6 +16,8 @@ export function useCloudSync(items: Anime[], itemsRef: RefObject<Anime[]>, apply
   const [status, setStatus] = useState<SyncStatus>(cloudEnabled ? 'signed-out' : 'off')
   const [error, setError] = useState<string | null>(null)
   const [lastSync, setLastSync] = useState<Date | null>(lastSyncDate)
+  // Arrivée depuis le lien « mot de passe oublié »
+  const [recovering, setRecovering] = useState(false)
   const sessionRef = useRef<Session | null>(null)
   const running = useRef(false)
   const again = useRef(false)
@@ -59,7 +61,8 @@ export function useCloudSync(items: Anime[], itemsRef: RefObject<Anime[]>, apply
       else setStatus('signed-out')
     }
     void supabase.auth.getSession().then(({ data }) => onSession(data.session))
-    const { data } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === 'PASSWORD_RECOVERY') setRecovering(true)
       // Évite une synchro à chaque rafraîchissement de jeton
       if (s?.user.id !== sessionRef.current?.user.id) onSession(s)
       else sessionRef.current = s
@@ -92,5 +95,5 @@ export function useCloudSync(items: Anime[], itemsRef: RefObject<Anime[]>, apply
     }
   }, [run])
 
-  return { session, status, error, lastSync, syncNow: run }
+  return { session, status, error, lastSync, syncNow: run, recovering, clearRecovery: () => setRecovering(false) }
 }

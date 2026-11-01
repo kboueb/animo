@@ -456,3 +456,10 @@ textarea { width: 100%; resize: vertical; }
 @media (min-width: 600px) {
   .account-dialog { width: min(480px, calc(100vw - 32px)); }
 }
+.segmented { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: var(--surface-2); }
+.segmented button { min-height: 40px; border: 0; border-radius: 10px; background: none; font-weight: 800; color: var(--muted); cursor: pointer; }
+.segmented button.on { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.password-wrap { position: relative; display: flex; }
+.password-wrap input { flex: 1; padding-right: 84px; }
+.show-pw { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); }
+.account-message.error { color: var(--danger); }

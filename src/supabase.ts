@@ -10,7 +10,8 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 export const supabase: SupabaseClient | null =
   url && anonKey
     ? createClient(url, anonKey, {
-        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+        // detectSessionInUrl : lit les liens reçus par e-mail (confirmation d'adresse, mot de passe oublié)
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
       })
     : null
 

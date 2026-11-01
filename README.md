@@ -17,15 +17,14 @@ L'app s'ouvre alors en plein écran et fonctionne hors ligne (liste et affiches 
 
 ## Synchronisation en ligne (Supabase, optionnel)
 
-Sans configuration, ANIMO fonctionne en local uniquement. Avec Supabase, la liste est sauvegardée en ligne et synchronisée entre tes appareils (connexion par code reçu par e-mail).
+Sans configuration, ANIMO fonctionne en local uniquement. Avec Supabase, la liste est sauvegardée en ligne et synchronisée entre tes appareils (connexion par e-mail + mot de passe, compatible avec le plan gratuit).
 
-1. Crée un projet gratuit sur [supabase.com](https://supabase.com) (région Europe, par exemple Paris ou Francfort).
-2. **SQL Editor** → New query → colle le contenu de [`supabase/schema.sql`](supabase/schema.sql) → **Run**.
-3. **Authentication → Emails → Templates → Magic Link** : remplace le contenu par un message qui contient le code, par exemple :
-   `<h2>Ton code ANIMO</h2><p>Code de connexion : <strong>{{ .Token }}</strong></p>`
-   (sans `{{ .Token }}`, tu recevrais un lien au lieu d'un code, et le lien ne s'ouvre pas dans l'app installée sur iPhone).
-4. **Project Settings → API** : copie *Project URL* et la clé *anon public* dans un fichier `.env.local` (modèle : `.env.example`).
-5. Relance `npm run dev`. Un bouton nuage apparaît en haut : connecte-toi avec ton e-mail.
+1. Crée un projet Supabase (directement, ou via l'intégration Supabase de Vercel).
+2. **SQL Editor** → New query → colle le contenu de [`supabase/schema.sql`](supabase/schema.sql) → **Run** (« Success. No rows returned »).
+3. **Authentication → URL Configuration** : mets l'adresse de l'app en ligne (ex. `https://animo.vercel.app`) dans *Site URL* et dans *Redirect URLs*. Elle sert aux liens de confirmation d'adresse et de mot de passe oublié.
+4. Optionnel : **Authentication → Sign In / Providers → Email** → désactive *Confirm email* pour pouvoir te connecter tout de suite après avoir créé ton compte.
+5. Variables d'environnement : l'app accepte `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` (fichier `.env.local`, modèle `.env.example`) **ou** les variables créées par l'intégration Vercel (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`…). Seules l'URL et la clé publique sont injectées dans l'app, jamais la clé `service_role`.
+6. Un bouton nuage apparaît en haut de l'app : crée ton compte, puis connecte-toi avec les mêmes identifiants sur tes autres appareils.
 
 Fonctionnement : l'appareil reste la source immédiate (rapide, hors ligne). La synchro a lieu à la connexion, après chaque modification, au retour sur l'app, au retour du réseau et toutes les 2 minutes. En cas de modification du même anime sur deux appareils, la plus récente gagne. Les règles RLS garantissent que chaque compte ne voit que ses propres données.
 
