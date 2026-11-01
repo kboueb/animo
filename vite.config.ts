@@ -1,8 +1,35 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-export default defineConfig({
+/**
+ * Supabase : on accepte les noms de variables de l'intégration Vercel ↔ Supabase
+ * (NEXT_PUBLIC_SUPABASE_*, SUPABASE_*) en plus des nôtres (VITE_SUPABASE_*).
+ * Seules l'URL et la clé publique (anon / publishable) sont injectées dans l'app :
+ * la clé service_role, aussi créée par l'intégration, n'est jamais lue ici.
+ */
+function supabaseEnv(mode: string) {
+  const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env }
+  const first = (...names: string[]) => names.map((n) => env[n]).find((v) => v && v.trim()) ?? ''
+  return {
+    url: first('VITE_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_URL'),
+    anonKey: first(
+      'VITE_SUPABASE_ANON_KEY',
+      'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+      'SUPABASE_ANON_KEY',
+      'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+      'SUPABASE_PUBLISHABLE_KEY',
+    ),
+  }
+}
+
+export default defineConfig(({ mode }) => {
+  const supa = supabaseEnv(mode)
+  return {
+  define: {
+    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(supa.url),
+    'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(supa.anonKey),
+  },
   plugins: [
     react(),
     VitePWA({
@@ -57,4 +84,5 @@ export default defineConfig({
       },
     }),
   ],
+}
 })
